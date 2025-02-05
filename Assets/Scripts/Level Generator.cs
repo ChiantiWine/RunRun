@@ -9,11 +9,10 @@ public class LevelGenerator : MonoBehaviour
     [SerializeField] float chunkLength = 10f;
     [SerializeField] float moveSpeed = 8f;
 
-    // GameObject[] chunks = new GameObject[12];
     List<GameObject> chunks = new List<GameObject>();
     void Start()
     {
-        spawnChunks();
+        SpawnStartingChunks();
     }
 
     void Update()
@@ -21,42 +20,57 @@ public class LevelGenerator : MonoBehaviour
         moveChunks();
     }
 
-    void spawnChunks()
+    void SpawnStartingChunks()
     {
         for (int i = 0; i < startingChunksAmount; i++)
         {
-            float spawnPositionZ = CalculateSpawnPositionZ(i);
-            Debug.Log($"-------------{spawnPositionZ}");
-
-            Vector3 chunkSpawnPos = new Vector3(transform.position.x, transform.position.y, spawnPositionZ);
-            GameObject newChunk = Instantiate(chunkPrefab, chunkSpawnPos, Quaternion.identity, chunkParent);
-            
-            chunks[i] = newChunk;
+            SpawnChunk();
         }
     }
 
-    float CalculateSpawnPositionZ(int i)
+    void SpawnChunk()
+    {
+        float spawnPositionZ = CalculateSpawnPositionZ();
+        Vector3 chunkSpawnPos = new Vector3(transform.position.x, transform.position.y, spawnPositionZ);
+        GameObject newChunk = Instantiate(chunkPrefab, chunkSpawnPos, Quaternion.identity, chunkParent);
+
+        chunks.Add(newChunk);
+    }
+
+    float CalculateSpawnPositionZ()
     {
         float spawnPositionZ;
+       
 
-        if (i == 0)
+        if (chunks.Count == 0)
         {
             spawnPositionZ = transform.position.z;
         }
         else
         {
-            spawnPositionZ = transform.position.z + (i * chunkLength);
+           spawnPositionZ = chunks[chunks.Count -1].transform.position.z + chunkLength;
         }
-
+        
         return spawnPositionZ;
     }
+  
+    // 캐릭터 화면이 X, 카메라 뒤로 넘어가면 Chunk 삭제 -> 캐릭터 화면에서는 Chunk가 그대로 보임
     void moveChunks()
     {
-
         for (int i = 0; i < chunks.Count; i++)
-        {
+        {   // chunk 각 개별로 조절
+            GameObject chunk = chunks[i];
             // Unity에서 float끼리 곱하면 성능이 느려짐 - () 추가가
-            chunks[i].transform.Translate(-transform.forward * (moveSpeed * Time.deltaTime));
+            chunk.transform.Translate(-transform.forward * (moveSpeed * Time.deltaTime));
+
+            // chunkLength를 빼는 이유 -> 플레이어 시야에서는 보여야 함
+            if (chunk.transform.position.z <= Camera.main.transform.position.z - chunkLength)
+            {
+                // List에서도 삭제 : 불필요한 오브젝트 삭제(Level Generator에서 Debug 모드에서 확인 가능능)
+                chunks.Remove(chunk);
+                Destroy(chunk);
+                SpawnChunk();
+            }
         }
     }
 }
