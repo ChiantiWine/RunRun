@@ -3,15 +3,27 @@ using UnityEngine;
 
 public class LevelGenerator : MonoBehaviour
 {
+    [Header("References")]
     [SerializeField] CameraController cameraController;
-    [SerializeField] GameObject chunkPrefab;
+    [SerializeField] GameObject[] chunkPrefabs;
+    [SerializeField] GameObject checkPointChunkPrefab;
     [SerializeField] Transform chunkParent;
+    [SerializeField] ScoreManager scoreManager;
+
+    [Header("Level Settings")]
+    [Tooltip("chunk 프리팹의 크기가 변경된 경우가 아니면 chunk 길이 값을 변경하지 마십시오.")]
     [SerializeField] float chunkLength = 10f;
     [SerializeField] float moveSpeed = 8f;
     [SerializeField] float minMoveSpeed = 2f;
-     [SerializeField] int startingChunksAmount = 12;
+    [SerializeField] float maxMoveSpeed = 20f;
+    [SerializeField] float minGravityZ = -22f;
+    [SerializeField] float maxGravityZ = -2f;
+    [SerializeField] int startingChunksAmount = 12;
+    [SerializeField] int checkPointChunkInterval = 8;
 
     List<GameObject> chunks = new List<GameObject>();
+    int chunksSpawned = 0;
+
     void Start()
     {
         SpawnStartingChunks();
@@ -24,16 +36,21 @@ public class LevelGenerator : MonoBehaviour
 
     public void ChangeChunkMoveSpeed(float speedAmount)
     {
-        moveSpeed += speedAmount;
-
-        // 항상 최소 스피드 유지시킴킴
-        if (moveSpeed < minMoveSpeed)
+        // 최대 최소 스피드 설정
+        float newMoveSpeed = moveSpeed + speedAmount;
+        newMoveSpeed = Mathf.Clamp(newMoveSpeed, minMoveSpeed, maxMoveSpeed);
+       
+        if (newMoveSpeed != moveSpeed)
         {
-            moveSpeed = minMoveSpeed;
-        }
-            Physics.gravity = new Vector3(Physics.gravity.x, Physics.gravity.y, Physics.gravity.z - speedAmount ); // 속도에 따라 물리 법칙 적용
+            moveSpeed = newMoveSpeed;
+
+            // 중력 최대 최소 설정
+            float newGravityZ = Physics.gravity.z - speedAmount;
+            newGravityZ = Mathf.Clamp(newGravityZ, minGravityZ, maxGravityZ);
+            Physics.gravity = new Vector3(Physics.gravity.x, Physics.gravity.y, newGravityZ ); // 속도에 따라 물리 법칙 적용
 
             cameraController.ChangeCameraFOV(speedAmount);
+        }
     }
 
     void SpawnStartingChunks()
@@ -48,9 +65,29 @@ public class LevelGenerator : MonoBehaviour
     {
         float spawnPositionZ = CalculateSpawnPositionZ();
         Vector3 chunkSpawnPos = new Vector3(transform.position.x, transform.position.y, spawnPositionZ);
-        GameObject newChunk = Instantiate(chunkPrefab, chunkSpawnPos, Quaternion.identity, chunkParent);
+        GameObject chunkToSpawn = ChooseChunksSpawn();
+        GameObject newChunkGo = Instantiate(chunkToSpawn, chunkSpawnPos, Quaternion.identity, chunkParent);
+        chunks.Add(newChunkGo);
+        Chunk newChunk = newChunkGo.GetComponent<Chunk>();
+        newChunk.Init(this, scoreManager);
 
-        chunks.Add(newChunk);
+        chunksSpawned++;
+    }
+
+    private GameObject ChooseChunksSpawn()
+    {
+        GameObject chunkToSpawn;
+
+        if (chunksSpawned % checkPointChunkInterval == 0 && chunksSpawned != 0)
+        {
+            chunkToSpawn = checkPointChunkPrefab;
+        }
+        else
+        {
+            chunkToSpawn = chunkPrefabs[Random.Range(0, chunkPrefabs.Length)];
+        }
+
+        return chunkToSpawn;
     }
 
     float CalculateSpawnPositionZ()

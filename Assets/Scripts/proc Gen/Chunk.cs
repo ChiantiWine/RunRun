@@ -13,6 +13,8 @@ public class Chunk : MonoBehaviour
    
    [SerializeField] float[] lanes = { -3f, 0f, 3f};
 
+    LevelGenerator levelGenerator;
+    ScoreManager scoreManager;
     List<int> availableLanes = new List<int> {0, 1, 2};
    void Start()
    {
@@ -21,8 +23,14 @@ public class Chunk : MonoBehaviour
         SpawnCoins();
    }
 
+    public void Init(LevelGenerator levelGenerator, ScoreManager scoreManager)
+    {
+        this.levelGenerator = levelGenerator;
+        this.scoreManager = scoreManager;
+    }
+
     // Fence가 랜덤으로 1개에서 2개 생성되게 하기기
-   void SpawnFances()
+    void SpawnFances()
    {
     int fenceTospawn = Random.Range(0, lanes.Length);
 
@@ -42,7 +50,8 @@ public class Chunk : MonoBehaviour
         int selectedLane = SelectedLane();
 
         Vector3 spawnPosition = new Vector3(lanes[selectedLane], transform.position.y, transform.position.z);
-        Instantiate(applePrefab, spawnPosition, Quaternion.identity, this.transform);
+        Apple newApple = Instantiate(applePrefab, spawnPosition, Quaternion.identity, this.transform).GetComponent<Apple>();
+        newApple.Init(levelGenerator);
    }
 
    void SpawnCoins()
@@ -60,8 +69,8 @@ public class Chunk : MonoBehaviour
 
             float spawnPostionZ = topOfChunkZPos - (i * coinSeperationLength);
             Vector3 spawnPosition = new Vector3(lanes[selectedLane], transform.position.y, spawnPostionZ);
-            Instantiate(coinPrefab, spawnPosition, Quaternion.identity, this.transform);
-
+            Coin newCoin = Instantiate(coinPrefab, spawnPosition, Quaternion.identity, this.transform).GetComponent<Coin>();
+            newCoin.Init(scoreManager);
         } 
     
 
